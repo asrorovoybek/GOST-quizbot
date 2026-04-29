@@ -1,0 +1,4 @@
+aiogram==3.26.0
+aiohttp==3.10.5
+asyncpg
+openpyxl
