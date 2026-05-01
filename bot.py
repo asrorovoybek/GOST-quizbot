@@ -2187,7 +2187,16 @@ async def default_handler(message: Message, bot: Bot):
 # 13) RENDER UCHUN HEALTH SERVER
 # ============================================================
 async def health(request: web.Request) -> web.Response:
-    return web.Response(text="OK")
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute("SELECT 1")
+        return web.Response(text="OK - Database Active", status=200)
+    except Exception as e:
+        # Agar baza ulanishida xato bo'lsa ham 200 qaytaramiz, 
+        # toki UptimeRobot Render'ni o'chirib qo'ymasin (Down deb hisoblamasin).
+        print(f"Health check database ping error: {e}")
+        return web.Response(text="OK - Bot Active (DB Issue)", status=200)
 
 
 async def start_web_server() -> None:
