@@ -48,7 +48,7 @@ POLL_OPEN_PERIOD = 60
 MIN_OPTIONS = 2
 MAX_OPTIONS = 10
 QUESTIONS_PER_SESSION = 50
-FREE_QUESTIONS_LIMIT = 5  # Bepul savollar soni
+FREE_QUESTIONS_LIMIT = 10  # Bepul savollar soni (jami)
 
 # ============================================================
 # 3) TEST YUKLASH SHABLONI
@@ -908,7 +908,7 @@ async def send_welcome(message: Message):
         trial_info = "✅ <b>To'liq foydalanish</b> huquqi berilgan."
         kb_to_show = keyboard
     elif free_left > 0:
-        trial_info = f"🎁 Sizda <b>{free_left} ta bepul savol</b> imkoniyati bor.\nUshbu imkoniyat tugagach, botdan to'liq foydalanish uchun to'lov talab qilinadi."
+        trial_info = f"🎁 Sizda jami <b>{FREE_QUESTIONS_LIMIT} ta bepul savol</b> ishlash imkoniyati bor.\n(Hozirda <b>{free_left} ta</b> imkoniyatingiz qoldi)."
         kb_to_show = keyboard # Bepul savollar bo'lsa fanlarni ko'rsatamiz
     else:
         # Limit tugagan — to'lov xabari
