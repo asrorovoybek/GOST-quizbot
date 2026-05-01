@@ -34,8 +34,10 @@ from aiogram.types import (
 # ============================================================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
-ADMIN_IDS = {5383208910}  # admin Telegram ID lar
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "@admin")  # admin username
+# Admin ID larini environment variable dan olamiz
+raw_admin_ids = os.getenv("ADMIN_IDS", "5383208910")
+ADMIN_IDS = {int(x.strip()) for x in raw_admin_ids.split(",") if x.strip().isdigit()}
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "@GlobalJournals_site")  # admin username
 PAYMENT_INFO = os.getenv("PAYMENT_INFO", "Admin bilan bog'laning.")  # to'lov ma'lumotlari
 ADMIN_CONTACT_ID = 8566281882  # admin bilan bog'lanish uchun Telegram ID
 
@@ -522,11 +524,11 @@ def build_paused_keyboard() -> InlineKeyboardMarkup:
 
 
 def build_payment_keyboard() -> InlineKeyboardMarkup:
-    """To'lov so'rovi — kvitansiya yuborish + adminга murojaat."""
+    """To'lov so'rovi — kvitansiya yuborish + adminga murojaat."""
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="📎 Kvitansiya yuborish", callback_data="send_receipt")],
-            [InlineKeyboardButton(text="💬 Admin bilan bog'laning", url=f"https://t.me/{ADMIN_USERNAME.lstrip('@')}")],
+            [InlineKeyboardButton(text="💬 Admin bilan bog'lanish", url=f"https://t.me/{ADMIN_USERNAME.lstrip('@')}")],
         ]
     )
 
@@ -904,8 +906,10 @@ async def send_welcome(message: Message):
 
     if is_adm or is_appr:
         trial_info = "✅ <b>To'liq foydalanish</b> huquqi berilgan."
+        kb_to_show = keyboard
     elif free_left > 0:
-        trial_info = f"🎁 Sizda <b>{free_left} ta bepul savol</b> qolgan.\nTo'liq foydalanish uchun to'lov qiling."
+        trial_info = f"🎁 Sizda <b>{free_left} ta bepul savol</b> imkoniyati bor.\nUshbu imkoniyat tugagach, botdan to'liq foydalanish uchun to'lov talab qilinadi."
+        kb_to_show = keyboard # Bepul savollar bo'lsa fanlarni ko'rsatamiz
     else:
         # Limit tugagan — to'lov xabari
         payment_info = PAYMENT_INFO.replace("\\n", "\n").replace("\n", "\n")
@@ -928,7 +932,8 @@ async def send_welcome(message: Message):
         "Test davomida xohlasangiz <b>⏹ Testni tugatish</b> tugmasi bilan yakunlashingiz mumkin."
     )
     await message.answer(text, reply_markup=reply_keyboard)
-    await message.answer(subjects_text, reply_markup=keyboard)
+    if kb_to_show:
+        await message.answer(subjects_text if (is_adm or is_appr) else "Fanlar ro'yxati:", reply_markup=kb_to_show)
 
 
 async def finalize_test(target, user_id: int, full_name: str, username: Optional[str] = None):
@@ -1037,7 +1042,7 @@ async def send_next_question(target, user_id: int):
                 "va kvitansiyani yuboring — admin tasdiqlagach barcha fanlar ochiladi.\n\n"
                 f"{payment_info}"
             )
-            kb = build_payment_keyboard()
+            kb = build_payment_keyboard() # Kvitansiya va Admin tugmalari
             if isinstance(target, Message):
                 await target.answer(text, reply_markup=kb)
             else:
@@ -2216,27 +2221,33 @@ async def start_web_server() -> None:
 async def main():
     global subject_tests, subject_short_names
 
-    if not BOT_TOKEN:
-        raise ValueError("BOT_TOKEN topilmadi. Render Environment ga qo'shing.")
-    if not DATABASE_URL:
-        raise ValueError("DATABASE_URL topilmadi. Render Environment ga qo'shing.")
+    try:
+        if not BOT_TOKEN:
+            raise ValueError("BOT_TOKEN topilmadi. Render Environment ga qo'shing.")
+        if not DATABASE_URL:
+            raise ValueError("DATABASE_URL topilmadi. Render Environment ga qo'shing.")
 
-    await init_db()
-    subject_tests, subject_short_names = await load_questions()
+        print("Ma'lumotlar bazasiga ulanish kutilmoqda...")
+        await init_db()
+        subject_tests, subject_short_names = await load_questions()
 
-    bot = Bot(
-        token=BOT_TOKEN,
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-    )
-    dp = Dispatcher()
-    dp.include_router(router)
+        bot = Bot(
+            token=BOT_TOKEN,
+            default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        )
+        dp = Dispatcher()
+        dp.include_router(router)
 
-    await set_bot_commands(bot)
-    await start_web_server()
+        await set_bot_commands(bot)
+        await start_web_server()
 
-    print("Web server ishga tushdi...")
-    print("Bot ishga tushdi...")
-    await dp.start_polling(bot)
+        print("Web server ishga tushdi...")
+        print("Bot ishga tushdi...")
+        await dp.start_polling(bot)
+    except Exception as e:
+        print(f"BOT ISHGA TUSHISHIDA XATOLIK: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
